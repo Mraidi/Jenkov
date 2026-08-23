@@ -1,6 +1,6 @@
 # Jenkov — strength tools (layer 1)
 
-Implements `strength_tools.md` v1.1 against `strength_schema.sql`.
+Implements `strength_tools.md` v1.2 against `strength_schema.sql`.
 No LLM anywhere in here. That is deliberate: this layer is either correct or it
 isn't, and you find out from the tests rather than by guessing at the model.
 
