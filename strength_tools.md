@@ -1,5 +1,10 @@
 # Strength domain — tool contract
 
+**v1.2** — Documentation fixes only, no behaviour change: `end_session` return
+shape gained `warmup_sets` (already returned by the code since v1.0, missing
+from this doc), and the training-day rule is now stated where session identity
+is decided, not only under staleness.
+
 **v1.1** — `amend_last` gained `n`. Additive, default preserves v1.0 behaviour.
 
 Frozen. Signatures and return shapes do not change without a version bump and a
@@ -24,12 +29,21 @@ start_session(split_label=None, location=None, energy_1_10=None)
 
 Opens a session. `started_at` = now, `status='open'`, `in_warmup=1`.
 
+**Training day, not calendar date.** A session's identity is `workout_date`,
+computed as: anything before **04:00 local** belongs to the previous day.
+"Already open today" and "open from a previous day" below both mean *training
+day*, not calendar date — a session started at 23:30 and continuing past
+midnight is still the same training day, so it is still the same session.
+Calendar date is the wrong unit here: it splits a late-night workout into two
+sessions, which is the exact failure this rule exists to prevent.
+
 - `split_label` free text ('pull', 'push', 'legs'). Never validated against an
   enum — I change my mind mid-session and the label is post-processable.
-- If a session is already open **today**: returns `status='already_open'` with
-  the existing `workout_id`. Does not create a second one.
-- If a session is open from a **previous day**: auto-closes it as `abandoned`,
-  opens a new one, and says so.
+- If a session is already open **this training day**: returns
+  `status='already_open'` with the existing `workout_id`. Does not create a
+  second one.
+- If a session is open from a **previous training day**: auto-closes it as
+  `abandoned`, opens a new one, and says so.
 
 **Staleness rule.** Any tool that touches the open session first checks it.
 A session is stale if the last non-voided set is more than **6 hours** old, or
@@ -169,10 +183,16 @@ argument — a timestamp I could pass is a timestamp the model can invent.
 
 ```
 end_session(enjoyment_1_10=None, energy_1_10=None, note=None)
-  -> {status, duration_min, total_sets, exercises, say}
+  -> {status, duration_min, total_sets, warmup_sets, exercises, say}
 ```
 
 Sets `ended_at`, `status='closed'`. Returns a session summary.
+
+`total_sets` counts working sets only; `warmup_sets` is separate. A chain
+counts once (`total_sets` is the working-set version of the `set_number`
+rule above — segments are not counted individually). Kept apart deliberately:
+"done, 6 sets" after five working sets and one warm-up is ambiguous in the one
+place that has to be unambiguous.
 
 The subjective fields are the reason this verb exists — they are the only
 values in the whole domain that cannot be reconstructed later. If they come
